@@ -26,14 +26,14 @@ public class AccountService {
     JsonMapper mapper = JsonMapper.builder().build();
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    public String getUserInfo(String gameName, String tagLine)
+    public AccountDTO getAccount(String gameName, String tagLine)
             throws IOException, InterruptedException {
 
         String puuidUrl = puuidBaseUrl + "/riot/account/v1/accounts/by-riot-id/" + encodePath(gameName) + "/" + encodePath(tagLine);
-
         String accountJson = requestGet(puuidUrl);
         AccountDTO account = mapper.readValue(accountJson, AccountDTO.class);
-        return account.getPuuid();
+
+        return account;
     }
 
     public LeagueEntryDTO[] getLeague(String puuid) throws IOException, InterruptedException {
@@ -98,7 +98,7 @@ public class AccountService {
 
         if (response.statusCode() != 200) {
             throw new IllegalStateException(
-                    "라이엇 조회 실패: HTTP " + response.statusCode()
+                    "계정 API 조회 실패: HTTP " + response.statusCode()
             );
         }
 

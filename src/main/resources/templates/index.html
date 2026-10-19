@@ -1,10 +1,321 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+        .profile-icon {
+            width: 50px;
+        }
+
+        .match {
+            margin: 24px 0;
+            padding: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        .scoreboard {
+            width: 100%;
+            min-width: 850px;
+            margin-bottom: 16px;
+            border-collapse: collapse;
+        }
+
+        .scoreboard th,
+        .scoreboard td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .blue-team {
+            background: #dceaff;
+            color: #2057a5;
+        }
+
+        .red-team {
+            background: #ffe1e1;
+            color: #ac3030;
+        }
+
+        .my-row {
+            background: #fff8d9;
+        }
+
+        .champion-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 6px;
+        }
+
+        .icon-list {
+            display: flex;
+            gap: 4px;
+        }
+
+        .spell-icon,
+        .item-slot,
+        .item-slot img {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+        }
+
+        .item-slot {
+            display: inline-block;
+            background: #e5e7eb;
+        }
+
+        .scoreboard small {
+            color: #777;
+            margin-left: 4px;
+        }
+
+        .result {
+            display: block;
+            margin-top: 4px;
+            font-size: 12px;
+        }
+
+        .win {
+            color: #2563eb;
+        }
+
+        .lose {
+            color: #dc2626;
+        }
+
+        .rank-icon {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+        }
+
+        .profile-frame {
+            position: relative;
+            width: 180px;
+            height: 180px;
+        }
+
+        .profile-face {
+            position: absolute;
+            left: 50%;
+            top: 60%;
+            transform: translate(-50%, -50%);
+
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .profile-wings {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            z-index: 2;
+            pointer-events: none;
+        }
+    </style>
     <meta charset="UTF-8">
     <title>Title</title>
 </head>
 <body>
 
+<div class="profile-frame">
+
+    <img class="profile-face"
+         th:src="|https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${summoner.profileIconId}.png|"
+         alt="프로필">
+
+    <th:block th:each="entry : ${League}">
+        <img class="profile-wings"
+             th:if="${entry.queueType == 'RANKED_SOLO_5x5'}"
+             th:src="@{'/images/tier-wings/'
+                 + ${#strings.capitalize(#strings.toLowerCase(entry.tier))}
+                 + '.png'}"
+             alt="솔랭 티어 테두리">
+    </th:block>
+
+</div>
+<p th:text="'닉네임 : '+${account.getGameName()}+' # '+${account.getTagLine()}"></p>
+<p th:text="'레벨 : '+${summoner.getSummonerLevel()}"></p>
+
+<div th:each="league, index : ${League}">
+    <div th:if="${league.getQueueType()} == 'RANKED_SOLO_5x5'">
+        <p th:text="'솔랭 : '+${league.getTier()}+${league.getRank()}"></p>
+        <img class="rank-icon" th:src="@{'/images/emblem/Rank=' + ${league.getTier()} + '.png'}">
+    </div>
+
+    <div th:if="${league.getQueueType()} == 'RANKED_FLEX_SR'">
+        <p th:text="'자유랭크 : '+${league.getTier()}+${league.getRank()}"></p>
+        <img class="rank-icon" th:src="@{'/images/emblem/Rank=' + ${league.getTier()} + '.png'}">
+    </div>
+
+    <div th:if="${league.getQueueType()} == 'JADE_RANKED_SOLO_5x5'">
+        <p th:text="'클래식 : '+${league.getTier()}+${league.getRank()}"></p>
+        <img class="rank-icon" th:src="@{'/images/emblem/Rank=' + ${league.getTier()} + '.png'}">
+    </div>
+</div>
+
+<section class="match" th:each="match, status : ${matchList}">
+
+    <h3 th:text="|${status.count}번째 매치|"></h3>
+
+    <p th:text="|게임 시간: ${match.info.gameDuration / 60}분 ${match.info.gameDuration % 60}초 · 큐 ID: ${match.info.queueId}|"></p>
+
+    <div class="table-scroll">
+        <table class="scoreboard"
+               th:each="teamId : ${ {100, 200} }">
+
+            <thead>
+            <tr>
+                <th colspan="7"
+                    th:class="${teamId == 100 ? 'blue-team' : 'red-team'}"
+                    th:text="${teamId == 100 ? '블루팀' : '레드팀'}">
+                </th>
+            </tr>
+            <tr>
+                <th>라인</th>
+                <th>챔피언</th>
+                <th>닉네임</th>
+                <th>K / D / A</th>
+                <th>챔피언 피해량</th>
+                <th>스펠</th>
+                <th>아이템</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="p : ${match.info.participants}"
+                th:if="${p.teamId == teamId}"
+                th:classappend="${p.puuid == account.puuid ? 'my-row' : ''}">
+
+                <td th:text="${p.laneName}"></td>
+
+                <td>
+                    <img class="champion-icon"
+                         th:attr="data-champion-id=${p.championId}"
+                         th:alt="${p.championName}"
+                         th:title="${p.championName}">
+                </td>
+
+                <td>
+                    <strong th:text="${p.riotIdGameName}"></strong>
+                    <small th:text="|#${p.riotIdTagline}|"></small>
+
+                    <span class="result"
+                          th:classappend="${p.win ? 'win' : 'lose'}"
+                          th:text="${p.win ? '승리' : '패배'}">
+                    </span>
+                </td>
+
+                <td th:text="|${p.kills} / ${p.deaths} / ${p.assists}|"></td>
+
+                <td th:text="${p.totalDamageDealtToChampions}"></td>
+
+                <td>
+                    <div class="icon-list">
+                        <img class="spell-icon"
+                             th:attr="data-spell-id=${p.summoner1Id}"
+                             alt="스펠 1">
+
+                        <img class="spell-icon"
+                             th:attr="data-spell-id=${p.summoner2Id}"
+                             alt="스펠 2">
+                    </div>
+                </td>
+
+                <td>
+                    <div class="icon-list">
+                        <span class="item-slot"
+                              th:each="itemId : ${p.items}">
+
+                            <img th:if="${itemId != 0}"
+                                 th:src="|https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png|"
+                                 th:alt="|아이템 ${itemId}|"
+                                 th:title="|아이템 ${itemId}|"
+                                 onerror="this.style.display='none'">
+                        </span>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+
+        </table>
+    </div>
+</section>
+
 </body>
+
+<script th:inline="javascript">
+    const version = /*[[${version}]]*/ "";
+
+    async function loadGameImages() {
+        const baseUrl =
+            `https://ddragon.leagueoflegends.com/cdn/${version}`;
+
+        const responses = await Promise.all([
+            fetch(`${baseUrl}/data/ko_KR/champion.json`),
+            fetch(`${baseUrl}/data/ko_KR/summoner.json`)
+        ]);
+
+        if (responses.some(response => !response.ok)) {
+            throw new Error("Data Dragon 데이터 조회 실패");
+        }
+
+        const [championJson, spellJson] = await Promise.all(
+            responses.map(response => response.json())
+        );
+
+        const championMap = new Map(
+            Object.values(championJson.data)
+                .map(champion => [champion.key, champion])
+        );
+
+        const spellMap = new Map(
+            Object.values(spellJson.data)
+                .map(spell => [spell.key, spell])
+        );
+
+        document.querySelectorAll("[data-champion-id]")
+            .forEach(img => {
+                const champion =
+                    championMap.get(img.dataset.championId);
+
+                if (champion) {
+                    img.src =
+                        `${baseUrl}/img/champion/${champion.image.full}`;
+
+                    img.alt = champion.name;
+                    img.title = champion.name;
+                }
+            });
+
+        document.querySelectorAll("[data-spell-id]")
+            .forEach(img => {
+                const spell = spellMap.get(img.dataset.spellId);
+
+                if (spell) {
+                    img.src =
+                        `${baseUrl}/img/spell/${spell.image.full}`;
+
+                    img.alt = spell.name;
+                    img.title = spell.name;
+                }
+            });
+    }
+
+    loadGameImages().catch(error => {
+        console.error("게임 이미지 로딩 실패:", error);
+    });
+</script>
 </html>
